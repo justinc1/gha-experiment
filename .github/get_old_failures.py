@@ -10,6 +10,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def output_retry_job_names(retry_job_names):
+    logger.info(f"retry_job_names={retry_job_names}")
+    for name in retry_job_names:
+        print(name)
+
+
 def main():
     # repo = "https://github.com/justinc1/gha-experiment"
     # repo_api = " https://api.github.com/repos/justinc1/gha-experiment"
@@ -23,9 +29,7 @@ def main():
     run_attempt = run_data['run_attempt']
     logger.info(f"Latest/current run_attempt={run_attempt}")
     if run_attempt == 1:
-        retry_job_names = ""
-        logger.info(f"retry_job_names={retry_job_names}")
-        print(f"retry_job_names={retry_job_names}")
+        output_retry_job_names([])
         return
 
     previous_run_attempt = run_attempt - 1
@@ -49,12 +53,11 @@ def main():
         for job in previous_jobs
         if job["conclusion"] in ["failure", "cancelled"]
     ]
-    retry_job_names = " ".join([
+    retry_job_names = [
         job["name"]
         for job in retry_needed_jobs
-    ])
-    logger.info(f"retry_job_names={retry_job_names}")
-    print(f"retry_job_names={retry_job_names}")
+    ]
+    output_retry_job_names(retry_job_names)
 
 
 if __name__ == "__main__":
