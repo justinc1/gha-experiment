@@ -157,8 +157,9 @@ jobs:
 
   integ-seq-run:
     needs:
+      - integ-run
       - integ-seq-matrix
-    if: "(needs.integ-seq-matrix.result=='success')"
+    if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
