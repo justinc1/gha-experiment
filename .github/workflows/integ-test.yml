@@ -140,7 +140,7 @@ jobs:
           - https://10.5.11.201
     steps:
       - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
-      - run: sleep 20
+      - run: sleep 10
       - shell: bash
         run: |-
           if [ "${{ matrix.sc_host }} ${{ matrix.test_name }}" == "https://10.5.11.201 test1" ]
@@ -186,4 +186,4 @@ jobs:
         example_name: ${{ fromJson(needs.examples-matrix.outputs.matrix) }}
     steps:
       - run: echo matrix.example_name=${{ matrix.example_name }}
-      - run: sleep 20
+      - run: sleep 10
