@@ -155,37 +155,11 @@ jobs:
             echo TTRT Continue
           fi
 
-
-# extra job, get all job-names that failed before, us it in job.if ?
-  retry_job_names:
-    runs-on: [ubuntu-latest]
-    continue-on-error: true
-    outputs:
-      retry_job_names: ${{ steps.gen-names.outputs.retry_job_names }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - run: pip install requests
-      - run: .github/get_old_failures.py
-      - id: gen-names
-        # shell: bash
-        run: .github/get_old_failures.py >> $GITHUB_OUTPUT
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-      # Fail so the job is executed again on re-run
-      - run: exit 1
-
-
   integ-seq-run:
     needs:
       - integ-run
       - integ-seq-matrix
-#      - retry_job_names
     if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
-#    if: "(needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, github.job_name)) && (!cancelled()) && (needs.integ-seq-matrix.result=='success')"
-#    if: "needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, 'integ-seq-run (seq1, https://10.5.11.201)')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
