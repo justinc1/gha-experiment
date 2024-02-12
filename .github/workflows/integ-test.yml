@@ -160,7 +160,7 @@ jobs:
   retry_job_names:
     runs-on: [ubuntu-latest]
     outputs:
-      matrix: ${{ steps.gen-names.outputs.retry_job_names }}
+      retry_job_names: ${{ steps.gen-names.outputs.retry_job_names }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -179,7 +179,8 @@ jobs:
     needs:
       - integ-run
       - integ-seq-matrix
-    if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
+      - retry_job_names
+    if: "(needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, github.job_name)) && (!cancelled()) && (needs.integ-seq-matrix.result=='success')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:

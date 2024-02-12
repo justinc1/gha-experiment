@@ -23,7 +23,9 @@ def main():
     run_attempt = run_data['run_attempt']
     logger.info(f"Latest/current run_attempt={run_attempt}")
     if run_attempt == 1:
-        print(f"retry_job_names=")
+        retry_job_names = ""
+        logger.info(f"retry_job_names={retry_job_names}")
+        print(f"retry_job_names={retry_job_names}")
         return
 
     previous_run_attempt = run_attempt - 1
