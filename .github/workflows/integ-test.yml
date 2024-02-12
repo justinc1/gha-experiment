@@ -82,6 +82,8 @@ jobs:
     if: "${{ github.event.inputs.integ_tests_include || github.event.schedule }}"
 
   integ-seq-matrix:
+    needs:
+      - integ-matrix
     runs-on: [ubuntu-latest]
     container: quay.io/justinc1_github/scale_ci_integ:9
     outputs:
@@ -101,6 +103,8 @@ jobs:
     if: "${{ github.event.inputs.integ_seq_tests_include || github.event.schedule }}"
 
   examples-matrix:
+    needs:
+      - integ-seq-matrix
     runs-on: [ubuntu-latest]
     container: quay.io/justinc1_github/scale_ci_integ:9
     outputs:
@@ -154,7 +158,6 @@ jobs:
   integ-seq-run:
     needs:
       - integ-seq-matrix
-      - integ-run
     if: "(needs.integ-seq-matrix.result=='success')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
