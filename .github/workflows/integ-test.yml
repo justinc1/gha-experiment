@@ -28,11 +28,16 @@ on:
         description: |-
           List seq integration tests to exclude.
         default: "^seq2$"
-      examples_tests_include:
+      examples_include:
         type: string
         description: |-
           List examples to include into testing.
         default: "ex2"
+      examples_exclude:
+        type: string
+        description: |-
+          List examples to exclude into testing.
+        default: "^bla$"
 
 concurrency:
   group: ${{ github.ref_name }}
@@ -97,17 +102,17 @@ jobs:
       - run: |
           if [ "" != "${{ github.event.schedule }}" ]
           then
-            echo 'EXAMPLES_TESTS_INCLUDE=${{ env.EXAMPLES_TESTS_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+            echo 'EXAMPLES_INCLUDE=${{ env.EXAMPLES_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
           else
-            echo 'EXAMPLES_TESTS_INCLUDE=${{ github.event.inputs.examples_tests_include }}' >> $GITHUB_ENV
+            echo 'EXAMPLES_INCLUDE=${{ github.event.inputs.examples_include }}' >> $GITHUB_ENV
           fi
       - id: set-matrix
         shell: bash
         run: |-
           echo "matrix=$(
             echo -e "ex1\nex2\nex3" |
-            grep -v -E "${{ env.INTEG_TESTS_EXCLUDE }}" |
-            grep -E "${{ env.INTEG_TESTS_INCLUDE }}" |
+            grep -v -E "${{ env.EXAMPLES_EXCLUDE }}" |
+            grep -E "${{ env.EXAMPLES_INCLUDE }}" |
             jq -R -s -c 'split("\n")[:-1]'
           )" >> $GITHUB_OUTPUT
     if: "${{ github.event.inputs || github.event.schedule }}"
@@ -116,7 +121,7 @@ jobs:
     needs:
       - integ-matrix
     runs-on: [ubuntu-latest]
-    container: quay.io/justinc1_github/scale_ci_integ:9
+    # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
       fail-fast: false
       matrix:
@@ -130,11 +135,11 @@ jobs:
 
   integ-seq-run:
     needs:
-      - integ-matrix
+      - integ-seq-matrix
       - integ-run
     if: "always() && (needs.integ-seq-matrix.result=='success')"
     runs-on: [ubuntu-latest]
-    container: quay.io/justinc1_github/scale_ci_integ:9
+    # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -145,7 +150,7 @@ jobs:
           - https://10.5.11.201
     steps:
       - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
-      - run: sleep 20
+      - run: sleep 5
 
   examples-run:
     needs:
@@ -155,7 +160,7 @@ jobs:
       - integ-seq-run
     if: "always() && (needs.examples-matrix.result=='success')"
     runs-on: [ubuntu-latest]
-    container: quay.io/justinc1_github/scale_ci_integ:9
+    # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
       fail-fast: false
       max-parallel: 1
