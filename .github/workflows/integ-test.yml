@@ -32,7 +32,7 @@ on:
         type: string
         description: |-
           List examples to include into testing.
-        default: "ex2"
+        default: "ex2,ex3"
       examples_exclude:
         type: string
         description: |-
@@ -157,8 +157,8 @@ jobs:
 
   integ-seq-run:
     needs:
-      - integ-run
       - integ-seq-matrix
+      - integ-run
     if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
@@ -175,32 +175,18 @@ jobs:
       - run: sleep 5
       - name: Checkout
         uses: actions/checkout@v4
-      - run: pip install requests
       - shell: bash
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          X_GITHUB_JOB_NAME: "integ-seq-run (${{ matrix.test_name }}, ${{ matrix.sc_host }})"
         run: |-
-          .github/get_old_failures.py > retry_job_names.txt
-          echo -----------------------
-          cat retry_job_names.txt
-          echo -----------------------
-          if [ "${{ github.run_attempt }}" == "1" ]
+          if ! .github/job_retry_needed.py
           then
-              echo "RUN, job_name=$job_name, run_attempt==1"
-          else
-            # job_name="integ-run (test1, https://10.5.11.201)"
-            job_name="integ-seq-run (${{ matrix.test_name }}, ${{ matrix.sc_host }})"
-            if grep "$job_name" retry_job_names.txt
-            then
-              echo "RETRY, job_name='$job_name' in retry_job_names"
-            else
-              echo "SKIP, job_name='$job_name' not in retry_job_names"
-              exit 0
-            fi
+            echo SKIP test, job retry not needed
+            exit 0
           fi
-          echo -----------------------
 
           if [ "${{ matrix.sc_host }} ${{ matrix.test_name }}" == "https://10.5.11.201 seq1" ]
           then
@@ -213,10 +199,8 @@ jobs:
   examples-run:
     needs:
       - examples-matrix
-      # run examples after integ - they will both try to modify say syslog_server etc
-      - integ-run
       - integ-seq-run
-    if: "always() && (needs.examples-matrix.result=='success')"
+    if: "(!cancelled()) && (needs.examples-matrix.result=='success')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
@@ -227,3 +211,25 @@ jobs:
     steps:
       - run: echo matrix.example_name=${{ matrix.example_name }}
       - run: sleep 10
+      - name: Checkout
+        uses: actions/checkout@v4
+      - shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          X_GITHUB_JOB_NAME: "examples-run (${{ matrix.example_name }})"
+        run: |-
+          if ! .github/job_retry_needed.py
+          then
+            echo SKIP test, job retry not needed
+            exit 0
+          fi
+
+          if [ "${{ matrix.test_name }}" == "ex3" ]
+          then
+            echo TTRT Exit with error
+            exit 11
+          else
+            echo TTRT Continue
+          fi
