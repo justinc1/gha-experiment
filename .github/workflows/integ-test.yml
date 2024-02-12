@@ -218,7 +218,7 @@ jobs:
           else
             # job_name="integ-run (test1, https://10.5.11.201)"
             job_name="integ-seq-run (${{ matrix.test_name }}, ${{ matrix.sc_host }})"
-            if [ $(grep "$job_name" retry_job_names.txt) ]
+            if grep "$job_name" retry_job_names.txt
             then
               echo "RETRY, job_name='$job_name' in retry_job_names"
             else
