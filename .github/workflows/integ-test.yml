@@ -184,7 +184,7 @@ jobs:
       - integ-seq-matrix
       - retry_job_names
 #    if: "(needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, github.job_name)) && (!cancelled()) && (needs.integ-seq-matrix.result=='success')"
-    if: "contains(needs.retry_job_names.outputs.retry_job_names, 'integ-seq-run (seq1, https://10.5.11.201)')"
+    if: "needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, 'integ-seq-run (seq1, https://10.5.11.201)')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
