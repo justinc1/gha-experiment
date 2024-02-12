@@ -182,9 +182,10 @@ jobs:
     needs:
       - integ-run
       - integ-seq-matrix
-      - retry_job_names
+#      - retry_job_names
+    if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
 #    if: "(needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, github.job_name)) && (!cancelled()) && (needs.integ-seq-matrix.result=='success')"
-    if: "needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, 'integ-seq-run (seq1, https://10.5.11.201)')"
+#    if: "needs.retry_job_names.outputs.retry_job_names=='' || contains(needs.retry_job_names.outputs.retry_job_names, 'integ-seq-run (seq1, https://10.5.11.201)')"
     runs-on: [ubuntu-latest]
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
@@ -198,8 +199,32 @@ jobs:
     steps:
       - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
       - run: sleep 5
+      - name: Checkout
+        uses: actions/checkout@v4
+      - run: pip install requests
       - shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |-
+          eval $(.github/get_old_failures.py)
+          echo retry_job_names=$retry_job_names
+          if [ "${{ github.run_attempt }}" == "1" ]
+          then
+              echo "RUN, job_name=$job_name, run_attempt==1"
+          else
+            # job_name="integ-run (test1, https://10.5.11.201)"
+            job_name="integ-seq-run (${{ matrix.test_name }}, ${{ matrix.sc_host }})"
+            if [ $(echo "$retry_job_names" | grep -q "$job_name" ) ]
+            then
+              echo "RETRY, job_name=$job_name in retry_job_names"
+            else
+              echo "SKIP, job_name=$job_name not in retry_job_names"
+              exit 0
+            fi
+          fi
+
           if [ "${{ matrix.sc_host }} ${{ matrix.test_name }}" == "https://10.5.11.201 seq1" ]
           then
             echo TTRT Exit with error
