@@ -38,6 +38,13 @@ on:
         description: |-
           List examples to exclude into testing.
         default: "^bla$"
+env:
+  INTEG_TESTS_INCLUDE_SCHEDULE: "*"
+  INTEG_TESTS_EXCLUDE_SCHEDULE: "^test_10|^test_11$"
+  INTEG_SEQ_TESTS_INCLUDE_SCHEDULE: "seq"
+  INTEG_SEQ_TESTS_EXCLUDE_SCHEDULE: "^seq2$"
+  EXAMPLES_TESTS_INCLUDE_SCHEDULE: "*"
+  EXAMPLES_TESTS_EXCLUDE_SCHEDULE: "^bla$"
 
 concurrency:
   group: ${{ github.ref_name }}
@@ -102,17 +109,19 @@ jobs:
       - run: |
           if [ "" != "${{ github.event.schedule }}" ]
           then
-            echo 'EXAMPLES_INCLUDE=${{ env.EXAMPLES_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+            echo 'EXAMPLES_TESTS_INCLUDE=${{ env.EXAMPLES_TESTS_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+            echo 'EXAMPLES_TESTS_EXCLUDE=${{ env.EXAMPLES_TESTS_EXCLUDE_SCHEDULE }}' >> $GITHUB_ENV
           else
-            echo 'EXAMPLES_INCLUDE=${{ github.event.inputs.examples_include }}' >> $GITHUB_ENV
+            echo 'EXAMPLES_TESTS_INCLUDE=${{ github.event.inputs.examples_include }}' >> $GITHUB_ENV
+            echo 'EXAMPLES_TESTS_EXCLUDE=${{ github.event.inputs.examples_exclude }}' >> $GITHUB_ENV
           fi
       - id: set-matrix
         shell: bash
         run: |-
           echo "matrix=$(
             echo -e "ex1\nex2\nex3" |
-            grep -v -E "${{ env.EXAMPLES_EXCLUDE }}" |
-            grep -E "${{ env.EXAMPLES_INCLUDE }}" |
+            grep -v -E "${{ env.EXAMPLES_TESTS_EXCLUDE }}" |
+            grep -E "${{ env.EXAMPLES_TESTS_INCLUDE }}" |
             jq -R -s -c 'split("\n")[:-1]'
           )" >> $GITHUB_OUTPUT
     if: "${{ github.event.inputs || github.event.schedule }}"
