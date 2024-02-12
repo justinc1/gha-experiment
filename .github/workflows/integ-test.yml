@@ -159,6 +159,7 @@ jobs:
 # extra job, get all job-names that failed before, us it in job.if ?
   retry_job_names:
     runs-on: [ubuntu-latest]
+    continue-on-error: true
     outputs:
       retry_job_names: ${{ steps.gen-names.outputs.retry_job_names }}
     steps:
@@ -173,6 +174,8 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+      # Fail so the job is executed again on re-run
+      - run: exit 1
 
 
   integ-seq-run:
