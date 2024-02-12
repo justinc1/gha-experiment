@@ -1,0 +1,166 @@
+# just playing with GHA
+name: integ-test
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      integ_tests_include:
+        type: string
+        description: |-
+          List integration tests to include.
+          Use "*" to run all tests.
+          Use regex like 'test|^git_issue' to run only a subset.
+        default: "*"
+      integ_tests_exclude:
+        type: string
+        description: |-
+          List integration tests to exclude.
+        default: "^test_10|^test_11$"
+      integ_seq_tests_include:
+        type: string
+        description: |-
+          List seq integration tests to include.
+        default: "^seq"
+      integ_seq_tests_exclude:
+        type: string
+        description: |-
+          List seq integration tests to exclude.
+        default: "^seq2$"
+      examples_tests_include:
+        type: string
+        description: |-
+          List examples to include into testing.
+        default: "ex2"
+
+concurrency:
+  group: ${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  integration-prepare-env:
+    runs-on: [ubuntu-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        sc_host:
+          - https://10.5.11.200  # HC 9.1.x
+    steps:
+      - run: echo sc_host=$sc_host
+    if: "${{ github.event.inputs.integ_tests_include || github.event.schedule }}"
+
+  integ-matrix:
+    runs-on: [ubuntu-latest]
+    container: quay.io/justinc1_github/scale_ci_integ:9
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - run: echo 'INTEG_TESTS_INCLUDE=${{ github.event.inputs.integ_tests_include || env.INTEG_TESTS_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+      - run: echo 'INTEG_TESTS_EXCLUDE=${{ github.event.inputs.integ_tests_exclude || env.INTEG_TESTS_EXCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+      - id: set-matrix
+        shell: bash
+        run: |-
+          echo "matrix=$(
+            echo -e "test1\ntest2\ntest3" |
+            grep -v -E "${{ env.INTEG_TESTS_EXCLUDE }}" |
+            grep -E "${{ env.INTEG_TESTS_INCLUDE }}" |
+            jq -R -s -c 'split("\n")[:-1]'
+          )" >> $GITHUB_OUTPUT
+    if: "${{ github.event.inputs.integ_tests_include || github.event.schedule }}"
+
+  integ-seq-matrix:
+    runs-on: [ubuntu-latest]
+    container: quay.io/justinc1_github/scale_ci_integ:9
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - run: echo 'INTEG_SEQ_TESTS_INCLUDE=${{ github.event.inputs.integ_seq_tests_include || env.INTEG_SEQ_TESTS_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+      - run: echo 'INTEG_SEQ_TESTS_EXCLUDE=${{ github.event.inputs.integ_seq_tests_exclude || env.INTEG_SEQ_TESTS_EXCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+      - id: set-matrix
+        shell: bash
+        run: |-
+          echo "matrix=$(
+            echo -e "seq1\nseq2\nseq3" |
+            grep -v -E "${{ env.INTEG_SEQ_TESTS_EXCLUDE }}" |
+            grep -E "${{ env.INTEG_SEQ_TESTS_INCLUDE }}" |
+            jq -R -s -c 'split("\n")[:-1]'
+          )" >> $GITHUB_OUTPUT
+    if: "${{ github.event.inputs.integ_seq_tests_include || github.event.schedule }}"
+
+  examples-matrix:
+    runs-on: [ubuntu-latest]
+    container: quay.io/justinc1_github/scale_ci_integ:9
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - run: |
+          if [ "" != "${{ github.event.schedule }}" ]
+          then
+            echo 'EXAMPLES_TESTS_INCLUDE=${{ env.EXAMPLES_TESTS_INCLUDE_SCHEDULE }}' >> $GITHUB_ENV
+          else
+            echo 'EXAMPLES_TESTS_INCLUDE=${{ github.event.inputs.examples_tests_include }}' >> $GITHUB_ENV
+          fi
+      - id: set-matrix
+        shell: bash
+        run: |-
+          echo "matrix=$(
+            echo -e "ex1\nex2\nex3" |
+            grep -v -E "${{ env.INTEG_TESTS_EXCLUDE }}" |
+            grep -E "${{ env.INTEG_TESTS_INCLUDE }}" |
+            jq -R -s -c 'split("\n")[:-1]'
+          )" >> $GITHUB_OUTPUT
+    if: "${{ github.event.inputs || github.event.schedule }}"
+
+  integ-run:
+    needs:
+      - integ-matrix
+    runs-on: [ubuntu-latest]
+    container: quay.io/justinc1_github/scale_ci_integ:9
+    strategy:
+      fail-fast: false
+      matrix:
+        test_name: ${{ fromJson(needs.integ-matrix.outputs.matrix) }}
+        sc_host:
+          - https://10.5.11.200
+          - https://10.5.11.201
+    steps:
+      - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
+      - run: sleep 20
+
+  integ-seq-run:
+    needs:
+      - integ-matrix
+      - integ-run
+    if: "always() && (needs.integ-seq-matrix.result=='success')"
+    runs-on: [ubuntu-latest]
+    container: quay.io/justinc1_github/scale_ci_integ:9
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        test_name: ${{ fromJson(needs.integ-seq-matrix.outputs.matrix) }}
+        sc_host:
+          - https://10.5.11.200
+          - https://10.5.11.201
+    steps:
+      - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
+      - run: sleep 20
+
+  examples-run:
+    needs:
+      - examples-matrix
+      # run examples after integ - they will both try to modify say syslog_server etc
+      - integ-run
+      - integ-seq-run
+    if: "always() && (needs.examples-matrix.result=='success')"
+    runs-on: [ubuntu-latest]
+    container: quay.io/justinc1_github/scale_ci_integ:9
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        example_name: ${{ fromJson(needs.examples-matrix.outputs.matrix) }}
+    steps:
+      - run: echo matrix.example_name=${{ matrix.example_name }}
+      - run: sleep 20
