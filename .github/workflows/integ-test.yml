@@ -144,7 +144,7 @@ jobs:
           - https://10.5.11.201
     steps:
       - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
-      - run: sleep 30
+      - run: sleep 10
       - shell: bash
         run: |-
           if [ "${{ matrix.sc_host }} ${{ matrix.test_name }}" == "https://10.5.11.201 test1" ]
