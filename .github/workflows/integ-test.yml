@@ -162,6 +162,7 @@ jobs:
     if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
     strategy:
       fail-fast: false
+#      max-parallel: 5
       matrix:
         sc_host:
           - h200  # https://10.5.11.200
@@ -170,7 +171,6 @@ jobs:
     with:
       sc_host: ${{ matrix.sc_host }}
       test_names: ${{ needs.integ-seq-matrix.outputs.matrix }}
-
 
   examples-run:
     needs:
