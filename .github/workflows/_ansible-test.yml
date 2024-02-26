@@ -1,0 +1,54 @@
+# called from other workflows
+name: _ansible-test
+
+on:
+  workflow_call:
+    inputs:
+      sc_host:
+        type: string
+        required: true
+        description: HyperCore host
+      test_names:
+        type: string
+        required: true
+        description: List of tests to run. JSON encoded.
+
+jobs:
+  ansible_test:
+    name: Run ansible-test
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+#        test_name: ${{ fromJson(needs.integ-seq-matrix.outputs.matrix) }}
+        test_name: ${{ fromJson(inputs.test_names) }}
+
+    steps:
+      - run: date
+      - run: echo inputs.sc_host=${{ inputs.sc_host }} matrix.test_name=${{ matrix.test_name }}
+      - run: echo github.run_id=${{ github.run_id }}
+      - run: sleep 5
+      - name: Checkout
+        uses: actions/checkout@v4
+      - shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          X_GITHUB_JOB_NAME: "integ-seq-run (${{ matrix.test_name }}, ${{ inputs.sc_host }})"
+        run: |-
+          if ! .github/job_retry_needed.py
+          then
+            echo SKIP test, job retry not needed
+            exit 0
+          fi
+
+          if [ "${{ inputs.sc_host }} ${{ matrix.test_name }}" == "h201 seq1" ]
+          then
+            echo TTRT Exit with error
+            exit 11
+          else
+            echo TTRT Continue
+          fi

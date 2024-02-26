@@ -160,50 +160,17 @@ jobs:
       - integ-seq-matrix
       - integ-run
     if: "(!cancelled()) && (needs.integ-seq-matrix.result=='success')"
-    runs-on: [ubuntu-latest]
-    # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
       fail-fast: false
-      # max-parallel: 2  # length of SC_HOSTs
       matrix:
-        test_name: ${{ fromJson(needs.integ-seq-matrix.outputs.matrix) }}
         sc_host:
           - h200  # https://10.5.11.200
           - h201  # https://10.5.11.201
+    uses: ./.github/workflows/_ansible-test.yml
+    with:
+      sc_host: ${{ matrix.sc_host }}
+      test_names: ${{ needs.integ-seq-matrix.outputs.matrix }}
 
-    concurrency:
-      # we want at most 1 job per SC_HOST
-      # we still allow to test multiple SC_HOSTs in parallel
-      group: ${{ github.ref_name }}-{{ matrix.sc_host }}
-      # will 2nd job be removed before run, or cancel the first job?
-      cancel-in-progress: false
-
-    steps:
-      - run: date
-      - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
-      - run: sleep 5
-      - name: Checkout
-        uses: actions/checkout@v4
-      - shell: bash
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          X_GITHUB_JOB_NAME: "integ-seq-run (${{ matrix.test_name }}, ${{ matrix.sc_host }})"
-        run: |-
-          if ! .github/job_retry_needed.py
-          then
-            echo SKIP test, job retry not needed
-            exit 0
-          fi
-
-          if [ "${{ matrix.sc_host }} ${{ matrix.test_name }}" == "https://10.5.11.201 seq1" ]
-          then
-            echo TTRT Exit with error
-            exit 11
-          else
-            echo TTRT Continue
-          fi
 
   examples-run:
     needs:
