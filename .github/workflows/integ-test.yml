@@ -164,12 +164,12 @@ jobs:
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
       fail-fast: false
-      max-parallel: 1
+      max-parallel: 2  # length of SC_HOSTs
       matrix:
         test_name: ${{ fromJson(needs.integ-seq-matrix.outputs.matrix) }}
         sc_host:
-          - https://10.5.11.200
-          - https://10.5.11.201
+          - h200  # https://10.5.11.200
+          - h201  # https://10.5.11.201
 
     concurrency:
       # we want at most 1 job per SC_HOST
@@ -179,6 +179,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
+      - run: date
       - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
       - run: sleep 5
       - name: Checkout
