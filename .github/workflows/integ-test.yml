@@ -95,7 +95,7 @@ jobs:
         shell: bash
         run: |-
           echo "matrix=$(
-            echo -e "seq1\nseq2\nseq3" |
+            echo -e "seq1\nseq2\nseq3\nseq4" |
             grep -v -E "${{ env.INTEG_SEQ_TESTS_EXCLUDE }}" |
             grep -E "${{ env.INTEG_SEQ_TESTS_INCLUDE }}" |
             jq -R -s -c 'split("\n")[:-1]'
@@ -170,6 +170,14 @@ jobs:
         sc_host:
           - https://10.5.11.200
           - https://10.5.11.201
+
+    concurrency:
+      # we want at most 1 job per SC_HOST
+      # we still allow to test multiple SC_HOSTs in parallel
+      group: ${{ github.ref_name }}-{{ matrix.sc_host }}
+      # will 2nd job be removed before run, or cancel the first job?
+      cancel-in-progress: true
+
     steps:
       - run: echo matrix.sc_host=${{ matrix.sc_host }} matrix.test_name=${{ matrix.test_name }}
       - run: sleep 5
