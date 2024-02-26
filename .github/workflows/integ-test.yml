@@ -176,7 +176,7 @@ jobs:
       # we still allow to test multiple SC_HOSTs in parallel
       group: ${{ github.ref_name }}-{{ matrix.sc_host }}
       # will 2nd job be removed before run, or cancel the first job?
-      cancel-in-progress: true
+      cancel-in-progress: false
 
     steps:
       - run: date
