@@ -164,7 +164,7 @@ jobs:
     # container: quay.io/justinc1_github/scale_ci_integ:9
     strategy:
       fail-fast: false
-      max-parallel: 2  # length of SC_HOSTs
+      # max-parallel: 2  # length of SC_HOSTs
       matrix:
         test_name: ${{ fromJson(needs.integ-seq-matrix.outputs.matrix) }}
         sc_host:
